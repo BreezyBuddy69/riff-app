@@ -1,0 +1,153 @@
+/* Riff-Bubble — kleiner + cleaner als Sable2s Voice-Pille (Master-Prompt
+   §6.6): IMMER dunkel (lesbar auf jedem Bildschirminhalt, bewusst nicht
+   theme-abhaengig - gleiches Prinzip wie beim Vorbild). Animiert wird nur
+   transform/opacity — Compositor-only, kein Layout-Thrashing. Groesse MUSS
+   mit SIZES in window.js synchron bleiben.
+   Nutzerwunsch (2x korrigiert): KEIN Glas-/Blur-/Transparenz-Look - komplett
+   opakes Schwarz, weisse Waveform, "Tic-Tac"-Kapselform (dicker/hoeher statt
+   duenner Streifen). */
+
+:root {
+  --ink: #f5f5f7;
+  --glass: #000000;
+  --glass-border: rgba(255, 255, 255, 0.14);
+  /* Kein Schatten (Nutzerwunsch): das Bubble-Fenster ist nur wenig groesser
+     als die Pille selbst - ein weicher CSS-Schatten braucht mehr Platz zum
+     Ausblenden, als das Fenster hat, und wird an dessen rechteckiger Kante
+     hart abgeschnitten ("hässlicher viereckiger Schatten"). */
+  --shadow: none;
+  --err: #ff6961;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; }
+body {
+  font-family: "SF Pro Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Die Pille ---------- */
+/* Kompaktes Seitenverhaeltnis, aber dicker/hoeher als die urspruengliche
+   Fassung (Nutzerwunsch: "eher wie ein Tic Tac, ein bisschen in die Hoehe") -
+   Groesse MUSS mit SIZES.normal/toggle in window.js synchron bleiben. Komplett
+   opak, kein backdrop-filter mehr - der Glas-/Blur-Look wurde explizit als
+   unerwuenscht zurueckgemeldet. */
+#pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 84px;
+  height: 34px;
+  border-radius: 9999px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  transition: background 220ms ease, border-color 220ms ease, width 160ms ease;
+}
+
+#pill[data-phase="error"] {
+  width: 300px;
+  height: 100px;
+  border-radius: 22px;
+  flex-direction: column;
+  border-color: rgba(255, 105, 97, 0.45);
+}
+
+/* ---------- Waveform ---------- */
+/* Etwas hoeher als zuvor, damit sie die dickere Pille fuellt - transition
+   kuerzer fuer einen knackigeren, "praeziseren" Bewegungseindruck. */
+#bars {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20px;
+}
+.bar {
+  width: 2px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--ink);
+  opacity: 0.85;
+  transform: scaleY(0.12);
+  transform-origin: center;
+  transition: transform 70ms linear, opacity 150ms ease;
+}
+
+#pill[data-phase="idle"] .bar { opacity: 0.4; }
+
+/* Bleibt komplett schwarz, auch waehrend der Aufnahme - nur die Groesse
+   pulsiert leicht, keine Farb-/Transparenz-Aenderung mehr (Nutzerwunsch). */
+#pill[data-phase="listening"] {
+  animation: listen-pill-breathe 1.3s ease-in-out infinite;
+}
+#pill[data-phase="listening"] .bar { animation: listen-bar-breathe 1.3s ease-in-out infinite; }
+#pill[data-phase="listening"] .bar:nth-child(2n) { animation-delay: 0.15s; }
+#pill[data-phase="listening"] .bar:nth-child(3n) { animation-delay: 0.3s; }
+@keyframes listen-pill-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes listen-bar-breathe { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+#pill[data-phase="thinking"] .bar { animation: bar-wave 1s ease-in-out infinite; }
+#pill[data-phase="thinking"] .bar:nth-child(1),
+#pill[data-phase="thinking"] .bar:nth-child(12) { animation-delay: 0s; }
+#pill[data-phase="thinking"] .bar:nth-child(2),
+#pill[data-phase="thinking"] .bar:nth-child(11) { animation-delay: 0.08s; }
+#pill[data-phase="thinking"] .bar:nth-child(3),
+#pill[data-phase="thinking"] .bar:nth-child(10) { animation-delay: 0.16s; }
+#pill[data-phase="thinking"] .bar:nth-child(4),
+#pill[data-phase="thinking"] .bar:nth-child(9) { animation-delay: 0.24s; }
+#pill[data-phase="thinking"] .bar:nth-child(5),
+#pill[data-phase="thinking"] .bar:nth-child(8) { animation-delay: 0.32s; }
+#pill[data-phase="thinking"] .bar:nth-child(6),
+#pill[data-phase="thinking"] .bar:nth-child(7) { animation-delay: 0.4s; }
+@keyframes bar-wave { 0%, 100% { transform: scaleY(0.12); opacity: 0.45; } 50% { transform: scaleY(0.8); opacity: 0.9; } }
+
+#pill[data-phase="error"] #bars { display: none; }
+
+/* ---------- Fehlertext ---------- */
+#errorText {
+  display: none;
+  padding: 0 18px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--err);
+  text-align: center;
+}
+#pill[data-phase="error"] #errorText { display: block; }
+
+/* ---------- Haken/Kreuz (nur Toggle-Modus, Master-Prompt §6.6) ----------
+   Standardmaessig unsichtbar UND nicht in der Layout-Breite - sie erscheinen
+   ausschliesslich waehrend eine Toggle-Session aufnimmt (window.js macht das
+   Fenster fuer genau dieses Zeitfenster klickbar, siehe setInteractive). */
+.ctrl {
+  display: none;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: none;
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  transition: transform 100ms ease, opacity 100ms ease;
+}
+.ctrl:hover { transform: scale(1.12); }
+.ctrl-cancel { background: rgba(255, 105, 97, 0.85); order: -1; }
+.ctrl-confirm { background: rgba(120, 200, 130, 0.85); order: 1; }
+
+#pill[data-kind="toggle"][data-phase="listening"] {
+  width: 106px; /* Platz fuer die beiden Buttons zusaetzlich zur Waveform */
+}
+#pill[data-kind="toggle"][data-phase="listening"] .ctrl {
+  display: flex;
+}

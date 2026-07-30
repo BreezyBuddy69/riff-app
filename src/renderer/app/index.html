@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <!-- connect-src 'none': die Oberflaeche kann per Konstruktion nicht selbst
+       ins Netz - alles laeuft ueber IPC durch den Main-Prozess. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none';" />
+  <link rel="stylesheet" href="app.css" />
+  <title>Riff</title>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="brand-name">Riff</span>
+      <span class="badge" id="tierBadge">Basic</span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <button type="button" class="nav-item" data-view="dictation"><span class="ico">◍</span>Diktat</button>
+      <button type="button" class="nav-item" data-view="insights"><span class="ico">▤</span>Insights</button>
+      <button type="button" class="nav-item" data-view="dictionary"><span class="ico">▦</span>Wörterbuch</button>
+      <button type="button" class="nav-item" data-view="snippets"><span class="ico">✂</span>Snippets</button>
+      <button type="button" class="nav-item" data-view="style"><span class="ico">Tt</span>Stil</button>
+      <button type="button" class="nav-item" data-view="transforms"><span class="ico">✧</span>Transforms</button>
+    </nav>
+
+    <div class="quota-card" id="quotaCard">
+      <strong id="quotaHeadline">–</strong>
+      <p id="quotaHint"></p>
+      <button type="button" class="btn-primary block" data-view="account" id="quotaCta">Pro freischalten</button>
+    </div>
+
+    <div class="nav nav-foot">
+      <button type="button" class="nav-item" data-view="account"><span class="ico">◔</span><span id="accountNavLabel">Konto</span></button>
+      <button type="button" class="nav-item" data-view="settings"><span class="ico">⚙</span>Einstellungen</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+
+    <!-- ---------------- Diktat ---------------- -->
+    <section class="view" id="view-dictation">
+      <h1 id="greeting">Willkommen zurück</h1>
+
+      <div class="hero-row">
+        <div class="banner" id="dictationBanner">
+          <div class="banner-copy">
+            <h2>Transforms funktionieren überall, wo du schreibst</h2>
+            <p>Text markieren, Hotkey drücken — Riff schreibt ihn um, ohne die App zu wechseln.</p>
+            <div class="banner-actions">
+              <button type="button" class="btn-primary" data-view="transforms">Ausprobieren</button>
+              <button type="button" class="btn-ghost" data-view="settings">Shortcuts ansehen</button>
+            </div>
+          </div>
+          <div class="banner-viz" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="stat-panel">
+          <div class="stat"><b id="statWords">0</b><span>Wörter insgesamt</span></div>
+          <div class="stat"><b id="statWpm">0</b><span>Wörter/Minute</span></div>
+          <div class="stat"><b id="statStreak">0</b><span id="statStreakLabel">Tage Serie</span></div>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h2 id="historyHeading">Verlauf</h2>
+        <div class="section-tools">
+          <input type="search" id="historySearch" placeholder="Verlauf durchsuchen…" spellcheck="false" />
+          <button type="button" class="btn-ghost small" id="clearHistory">Verlauf löschen</button>
+        </div>
+      </div>
+      <div id="historyList" class="history"></div>
+    </section>
+
+    <!-- ---------------- Insights ---------------- -->
+    <section class="view" id="view-insights">
+      <h1>Insights</h1>
+      <p class="lead">Alle Zahlen hier sind aus deinem echten Verlauf gerechnet — nichts geschätzt.</p>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="gauge">
+            <svg viewBox="0 0 120 68" class="gauge-svg" aria-hidden="true">
+              <path d="M10 62 A50 50 0 0 1 110 62" class="gauge-track" />
+              <path d="M10 62 A50 50 0 0 1 110 62" class="gauge-fill" id="gaugeFill" />
+            </svg>
+            <div class="gauge-center"><b id="insWpm">0</b><span>WPM</span></div>
+          </div>
+          <h3>Wörter pro Minute</h3>
+          <p class="muted" id="insWpmNote">Noch keine Messung.</p>
+        </div>
+
+        <div class="card">
+          <b class="big" id="insFixes">0</b>
+          <h3>Korrekturen durch Riff</h3>
+          <ul class="kv">
+            <li><span id="insFixesWords">0</span> Wörter bereinigt</li>
+            <li><span id="insDictFixes">0</span> Wörterbuch-Treffer</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div class="card-top">
+            <b class="big" id="insTotalWords">0</b>
+            <span class="pill" id="insMonthDelta" hidden></span>
+          </div>
+          <h3>Wörter diktiert</h3>
+          <ul class="kv">
+            <li><span id="insSessions">0</span> Diktate</li>
+            <li><span id="insToday">0</span> Wörter heute</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head">
+            <h3>Wo du diktierst</h3>
+            <span class="muted" id="insApps">0 Apps</span>
+          </div>
+          <div id="usageBars" class="bars"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3><span id="insStreak">0</span> Tage Serie</h3>
+            <span class="muted">Längste: <span id="insLongest">0</span> Tage</span>
+          </div>
+          <div class="heatmap-wrap">
+            <div class="heat-months" id="heatMonths"></div>
+            <div class="heatmap" id="heatmap"></div>
+          </div>
+          <div class="heat-legend"><span>weniger</span><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span>mehr</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- Wörterbuch ---------------- -->
+    <section class="view" id="view-dictionary">
+      <div class="section-head">
+        <h1>Wörterbuch</h1>
+      </div>
+      <div class="banner soft">
+        <div class="banner-copy">
+          <h2>Riff schreibt, wie <em>du</em> schreibst</h2>
+          <p>Namen, Fachbegriffe, Firmennamen. Die Einträge gehen in dieselbe Bereinigung, die nach jedem Diktat ohnehin läuft — kostet keine zusätzliche Zeit.</p>
+        </div>
+      </div>
+      <div id="dictSuggestionsWrap" style="display:none">
+        <div class="section-head"><h2>Vorschläge</h2></div>
+        <p class="hint">Wörter, die du oft sagst und die noch nicht im Wörterbuch stehen.</p>
+        <div id="dictSuggestions" class="rows"></div>
+      </div>
+      <form class="add-row" id="dictForm">
+        <input type="text" id="dictTerm" placeholder="Begriff in korrekter Schreibweise" spellcheck="false" required />
+        <input type="text" id="dictNote" placeholder="Notiz (optional)" spellcheck="false" />
+        <button type="submit" class="btn-primary">Hinzufügen</button>
+      </form>
+      <div id="dictList" class="rows"></div>
+    </section>
+
+    <!-- ---------------- Snippets ---------------- -->
+    <section class="view" id="view-snippets">
+      <div class="section-head">
+        <h1>Snippets</h1>
+      </div>
+      <div class="banner soft">
+        <div class="banner-copy">
+          <h2>Was du nie wieder tippen solltest</h2>
+          <p>Sprich den Auslöser aus, Riff setzt den hinterlegten Text ein — E-Mail-Adresse, Standard-Antwort, Prompt-Vorlage.</p>
+        </div>
+      </div>
+      <form class="add-row" id="snipForm">
+        <input type="text" id="snipTrigger" placeholder="Gesprochener Auslöser, z. B. „meine E-Mail“" spellcheck="false" required />
+        <input type="text" id="snipText" placeholder="Wird eingesetzt" spellcheck="false" required />
+        <button type="submit" class="btn-primary">Hinzufügen</button>
+      </form>
+      <div id="snipList" class="rows"></div>
+    </section>
+
+    <!-- ---------------- Stil ---------------- -->
+    <section class="view" id="view-style">
+      <h1>Stil</h1>
+      <div class="tabs" id="styleTabs"></div>
+      <div class="banner soft">
+        <div class="banner-copy">
+          <h2 id="styleContextTitle">Dieser Stil gilt in …</h2>
+          <p id="styleContextHint"></p>
+        </div>
+      </div>
+      <div class="grid-3" id="styleCards"></div>
+      <label class="switch-row">
+        <input type="checkbox" id="autoCleanup" />
+        <span>
+          <strong>Automatische Bereinigung</strong>
+          <em>Füllwörter, Versprecher und Satzzeichen werden nachbearbeitet. Aus: der Rohtext wird eingefügt — schneller, aber ungeschliffen.</em>
+        </span>
+      </label>
+    </section>
+
+    <!-- ---------------- Transforms ---------------- -->
+    <section class="view" id="view-transforms">
+      <div class="section-head">
+        <h1>Transforms</h1>
+        <label class="switch-row inline">
+          <input type="checkbox" id="transformsEnabled" />
+          <span><strong>Aktiviert</strong></span>
+        </label>
+      </div>
+      <div class="banner soft">
+        <div class="banner-copy">
+          <h2>Markieren, Hotkey, fertig</h2>
+          <p>Transforms schreiben markierten Text in jeder App um. Solange sie aktiviert sind, belegt Riff die hinterlegten globalen Tastenkombinationen.</p>
+        </div>
+      </div>
+      <div id="transformIssues" class="notice" hidden></div>
+      <div class="grid-3" id="transformCards"></div>
+
+      <form class="editor" id="transformForm" hidden>
+        <h3 id="transformFormTitle">Neuer Transform</h3>
+        <div class="field-row">
+          <label>Name<input type="text" id="tfName" required spellcheck="false" /></label>
+          <label>Kurzbeschreibung<input type="text" id="tfDesc" spellcheck="false" /></label>
+          <label>Hotkey
+            <div class="shortcut-row">
+              <input type="text" id="tfAccel" readonly spellcheck="false" placeholder="Super+Alt+1" />
+              <button type="button" class="rec-btn" id="rec-tfAccel" data-target="tfAccel" title="Kombination aufnehmen" aria-label="Kombination aufnehmen"></button>
+            </div>
+          </label>
+        </div>
+        <label>Anweisung an das Modell
+          <textarea id="tfPrompt" rows="5" required spellcheck="false"></textarea>
+        </label>
+        <div class="editor-actions">
+          <button type="submit" class="btn-primary">Speichern</button>
+          <button type="button" class="btn-ghost" id="tfCancel">Abbrechen</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ---------------- Konto ---------------- -->
+    <section class="view" id="view-account">
+      <h1>Konto</h1>
+
+      <div id="accountSignedOut">
+        <div class="banner soft">
+          <div class="banner-copy">
+            <h2>Anmelden ist optional</h2>
+            <p>Riff diktiert auch ohne Konto vollständig — Verlauf, Wörterbuch und Notizen liegen ohnehin nur auf diesem Gerät. Ein Konto merkt sich deinen Namen und deine E-Mail; der Pro-Tarif hängt weiterhin am eingelösten Code, nicht am Konto.</p>
+          </div>
+        </div>
+        <form class="auth-card" id="authForm">
+          <div class="tabs" id="authTabs">
+            <button type="button" class="tab active" data-mode="login">Anmelden</button>
+            <button type="button" class="tab" data-mode="signup">Registrieren</button>
+            <button type="button" class="tab" data-mode="reset">Passwort vergessen</button>
+          </div>
+          <label id="authNameField" hidden>Name<input type="text" id="authName" spellcheck="false" autocomplete="name" /></label>
+          <label>E-Mail<input type="email" id="authEmail" required autocomplete="email" spellcheck="false" /></label>
+          <label id="authPasswordField">Passwort<input type="password" id="authPassword" minlength="8" autocomplete="current-password" /></label>
+          <label id="authCodeField" hidden>Code aus der E-Mail<input type="text" id="authCode" spellcheck="false" autocomplete="one-time-code" /></label>
+          <label id="authNewPasswordField" hidden>Neues Passwort<input type="password" id="authNewPassword" minlength="8" autocomplete="new-password" /></label>
+          <p class="hint" id="authHint">Mindestens 8 Zeichen.</p>
+          <button type="submit" class="btn-primary block" id="authSubmit">Anmelden</button>
+          <p class="error" id="authError" hidden></p>
+          <p class="hint ok" id="authNote" hidden></p>
+        </form>
+      </div>
+
+      <div id="accountSignedIn" hidden>
+        <div class="card profile">
+          <div class="avatar" id="accountAvatar">R</div>
+          <div>
+            <strong id="accountName">–</strong>
+            <p class="muted" id="accountEmail"></p>
+          </div>
+          <span class="spacer"></span>
+          <button type="button" class="btn-ghost" id="logout">Abmelden</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Tarif</h3>
+        <p class="muted" id="accountTier">–</p>
+        <form class="add-row" id="redeemForm">
+          <input type="text" id="licenseCode" placeholder="RIFFPRO-XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off" />
+          <button type="submit" class="btn-primary">Einlösen</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ---------------- Einstellungen ---------------- -->
+    <section class="view" id="view-settings">
+      <h1>Einstellungen</h1>
+
+      <div class="card">
+        <h3>Shortcuts</h3>
+        <label>Halten zum Diktieren
+          <div class="shortcut-row">
+            <input id="flowHold" type="text" spellcheck="false" readonly />
+            <button id="rec-flowHold" type="button" class="rec-btn" data-target="flowHold" title="Kombination aufnehmen" aria-label="Kombination aufnehmen"></button>
+            <button type="button" class="reset-btn" data-target="flowHold" title="Auf Standard zurücksetzen" aria-label="Auf Standard zurücksetzen">↺</button>
+          </div>
+        </label>
+        <label>Doppelt tippen zum Diktieren
+          <div class="shortcut-row">
+            <input id="flowToggle" type="text" spellcheck="false" readonly />
+            <button id="rec-flowToggle" type="button" class="rec-btn" data-target="flowToggle" title="Kombination aufnehmen" aria-label="Kombination aufnehmen"></button>
+            <button type="button" class="reset-btn" data-target="flowToggle" title="Auf Standard zurücksetzen" aria-label="Auf Standard zurücksetzen">↺</button>
+          </div>
+        </label>
+        <p class="hint">Roten Knopf klicken, dann die gewünschte Kombination drücken.</p>
+      </div>
+
+      <div class="card">
+        <h3>Spracherkennung</h3>
+        <label>Sprache
+          <select id="language">
+            <option value="de">Deutsch</option>
+            <option value="auto">Automatisch erkennen</option>
+            <option value="en">Englisch</option>
+          </select>
+        </label>
+        <p class="hint">„Deutsch" verhindert, dass kurze deutsche Sätze gelegentlich als Englisch erkannt werden. Wer öfter in anderen Sprachen diktiert, stellt „Automatisch erkennen" ein.</p>
+        <label class="row"><input id="noiseSuppression" type="checkbox" /> Rauschunterdrückung</label>
+        <label>OpenRouter API-Key (optional)<input id="openRouterApiKey" type="password" spellcheck="false" autocomplete="off" /></label>
+        <p class="hint">Ohne eigenen Key läuft die Erkennung über Riffs Server — nichts zu konfigurieren.</p>
+      </div>
+
+      <div class="card">
+        <h3>Allgemein</h3>
+        <label class="row"><input id="autostart" type="checkbox" /> Mit Windows starten</label>
+        <label class="row"><input id="showWindowOnStartup" type="checkbox" /> Fenster beim Start anzeigen</label>
+        <button id="openFolder" type="button" class="btn-link">Konfigurationsordner öffnen…</button>
+        <div class="editor-actions">
+          <button id="restartApp" type="button" class="btn-ghost">Neu starten</button>
+          <button id="quitApp" type="button" class="btn-ghost danger">Beenden</button>
+        </div>
+      </div>
+
+      <div class="settings-foot">
+        <span id="settingsStatus"></span>
+        <button id="save" type="button" class="btn-primary">Speichern</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "name": "riff",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Riff - Spracherkennung, die schneller ist als Tippen. Shortcut halten oder doppelt antippen, sprechen, loslassen.",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/check.js",
+    "dist": "electron-builder --win"
+  },
+  "build": {
+    "appId": "cloud.halovision.riff",
+    "productName": "Riff",
+    "directories": { "output": "dist" },
+    "asar": false,
+    "files": [
+      "src/**/*",
+      "helper/**/*",
+      "scripts/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "shortcutName": "Riff",
+      "artifactName": "Riff-Setup.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}

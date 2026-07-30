@@ -1,0 +1,7 @@
+node_modules/
+dist/
+dist-*/
+config.json
+data.json
+audit.log
+*.log

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'none';" />
+  <link rel="stylesheet" href="voice.css" />
+  <title>Riff</title>
+</head>
+<body>
+  <div id="pill" data-phase="idle" data-kind="hold">
+    <div id="bars">
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+      <span class="bar"></span>
+    </div>
+    <!-- Nur im Toggle-Modus sichtbar (voice.css) - Maus-Alternative zum
+         zweiten Doppel-Tap, siehe Master-Prompt §6.6. -->
+    <button id="cancelBtn" class="ctrl ctrl-cancel" type="button" aria-label="Verwerfen" title="Verwerfen">✕</button>
+    <button id="confirmBtn" class="ctrl ctrl-confirm" type="button" aria-label="Übernehmen" title="Übernehmen">✓</button>
+    <div id="errorText" hidden></div>
+  </div>
+  <script src="voice.js"></script>
+</body>
+</html>
