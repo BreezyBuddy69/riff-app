@@ -37,27 +37,10 @@ const SKIP_CLEANUP_MAX_WORDS = 3;
 // kein Text, kein Roundtrip, kein Verlaufseintrag.
 // ponytail: fester Schwellwert, keine Mikrofon-Kalibrierung - hochsetzen,
 // falls ein leiser Mikrofon-Pegel echte leise Sprache faelschlich verwirft.
-const SILENCE_RMS = 300;
-
-// Zweite Verteidigungslinie gegen genau denselben Bug: RMS filtert reine
-// Stille raus, aber Atmen/Rauschen/Tastaturklicks haben genug Pegel, um die
-// Schwelle zu reissen, OHNE dass gesprochen wurde - Whisper halluziniert
-// darauf zuverlaessig dieselbe Handvoll Standardphrasen (trainingsdatenbedingt,
-// bekanntes Whisper-Verhalten). Exakter Treffer (nach Normalisierung) auf eine
-// dieser Phrasen als GESAMTES Transkript -> wird wie "nichts gesagt" behandelt.
-// ponytail: feste Phrasenliste statt Hallucination-Detection-Modell - neue
-// Phrasen hier ergaenzen, falls sie beim Nutzer auftauchen.
-const HALLUCINATION_PHRASES = new Set([
-  'vielen dank', 'vielen dank für ihre aufmerksamkeit', 'vielen dank fürs zuschauen',
-  'danke fürs zuschauen', 'amen', 'untertitelung des zdf für funk',
-  'untertitel der amara org-community', 'copyright wdr', 'bis zum nächsten mal',
-  'tschüss', 'thank you', 'thanks for watching', 'thank you for watching', 'bye', 'you',
-]);
-
-function isHallucination(text) {
-  const norm = text.toLowerCase().replace(/[.!?,;:]/g, '').replace(/\s+/g, ' ').trim();
-  return HALLUCINATION_PHRASES.has(norm);
-}
+// isSilence/isSpeech/isHallucination sind reine Funktionen in silenceFilter.js
+// (test/check.js prueft sie unter nacktem Node) - hier steht nur noch die
+// Pipeline, die sie verwendet.
+const { isSpeech, isHallucination } = require('./silenceFilter');
 
 let cfg = null;
 
@@ -71,17 +54,6 @@ let captureCapTimer = null;
 // darf nie zwischen "Taste los" und "Text steht da" liegen.
 let sessionStartedAt = 0;
 let sessionApp = { app: '', title: '' };
-
-function isSilence(buf) {
-  const n = buf.length >> 1;
-  if (!n) return true;
-  let sum = 0;
-  for (let i = 0; i < n; i++) {
-    const s = buf.readInt16LE(i * 2);
-    sum += s * s;
-  }
-  return Math.sqrt(sum / n) < SILENCE_RMS;
-}
 
 function isActive() { return kind !== null; }
 function getKind() { return kind; }
@@ -118,7 +90,7 @@ function beginSession(newKind) {
   if (!cfg || !cfg.voice.enabled || kind) return false;
   if (!license.canDictate(cfg)) {
     phase = 'error';
-    voiceWindow.show({ size: 'error' });
+    if (cfg.voice.bubbleEnabled !== false) voiceWindow.show({ size: 'error' });
     sendUi({ errorText: `Wochenlimit erreicht (${license.WEEKLY_LIMIT} Wörter). Code einlösen in den Einstellungen für unbegrenztes Diktieren.` });
     scheduleHide(ERROR_HIDE_MS);
     return false;
@@ -139,10 +111,16 @@ function beginSession(newKind) {
   armCaptureCap();
   // Toggle-Bubble bekommt Haken/Kreuz-Icons und braucht dafuer die breitere
   // 'toggle'-Groesse + wird dafuer kurz klickbar - Hold-Bubble bleibt bei
-  // 'normal' und immer click-through (Master-Prompt §6.6).
-  voiceWindow.show({ size: newKind === 'toggle' ? 'toggle' : 'normal' });
-  voiceWindow.setInteractive(newKind === 'toggle');
+  // 'normal' und immer click-through (Master-Prompt §6.6). bubbleEnabled
+  // false (Nutzer-Feedback) zeigt sie nie - Diktat funktioniert unveraendert,
+  // nur ohne Anzeige (die Bubble bleibt fuer die Mikrofon-Aufnahme trotzdem
+  // erzeugt/geladen, sie wird nur nie .show()n).
+  if (cfg.voice.bubbleEnabled !== false) {
+    voiceWindow.show({ size: newKind === 'toggle' ? 'toggle' : 'normal' });
+    voiceWindow.setInteractive(newKind === 'toggle');
+  }
   sendUi();
+  playCue('start');
   voiceWindow.send('voice:command', {
     type: 'start-capture',
     deviceId: cfg.voice.audioDeviceId || undefined,
@@ -150,6 +128,15 @@ function beginSession(newKind) {
     noiseSuppression: cfg.voice.noiseSuppression,
   });
   return true;
+}
+
+// Kurzer synthetischer Ton (kein Audio-Asset, siehe voice.js im Renderer) -
+// Nutzer-Feedback: man soll auch ohne Blick auf die Bubble hoeren, ob Riff
+// gerade zuhoert. Faehrt selbst nie den Hot-Path aus - ein IPC-send() wirft
+// nie synchron.
+function playCue(cueName) {
+  if (!cfg.voice.sounds.enabled) return;
+  voiceWindow.send('voice:command', { type: 'play-cue', cue: cueName, volume: cfg.voice.sounds.volume });
 }
 
 // ---------- Mode A: Halten ----------
@@ -202,11 +189,12 @@ async function finish() {
   voiceWindow.setInteractive(false);
   voiceWindow.resize('normal'); // Haken/Kreuz sind ab hier weg, egal ob es eine Toggle- oder Hold-Session war
   sendUi();
+  playCue('end');
   voiceWindow.send('voice:command', { type: 'stop-capture' });
 
   const buf = Buffer.concat(pcmChunks);
   pcmChunks = [];
-  if (!buf.length || isSilence(buf)) {
+  if (!isSpeech(buf, SAMPLE_RATE)) {
     phase = 'idle';
     sendUi();
     scheduleHide(IDLE_HIDE_MS);

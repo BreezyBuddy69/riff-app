@@ -610,9 +610,32 @@ function renderSettings() {
   $('language').value = S.config.voice.language;
   $('noiseSuppression').checked = S.config.voice.noiseSuppression;
   $('openRouterApiKey').value = S.config.voice.openRouterApiKey;
+  $('bubbleEnabled').checked = S.config.voice.bubbleEnabled !== false;
+  $('soundsEnabled').checked = !!S.config.voice.sounds.enabled;
+  $('soundsVolume').value = S.config.voice.sounds.volume;
   $('autostart').checked = S.autostart;
   $('showWindowOnStartup').checked = S.config.general.showWindowOnStartup;
+  refreshMicDevices();
 }
+
+// Geraeteliste ist erst nach einer erteilten Mikrofon-Berechtigung mit
+// Klarnamen befuellt (z.B. aus dem Onboarding-Mikrofontest) - ohne das bleiben
+// es anonyme "Mikrofon 1/2/...", was hier bewusst in Kauf genommen wird statt
+// bei jedem Settings-Aufruf ungefragt eine Berechtigung einzufordern.
+async function refreshMicDevices() {
+  const select = $('settingsMicDevice');
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const inputs = devices.filter((d) => d.kind === 'audioinput');
+    select.replaceChildren(
+      node('option', { value: '' }, 'Standardmikrofon'),
+      ...inputs.map((d, i) => node('option', { value: d.deviceId }, d.label || `Mikrofon ${i + 1}`)),
+    );
+    select.value = S.config.voice.audioDeviceId || '';
+  } catch { /* Geraeteliste ist rein kosmetisch - kein harter Fehler */ }
+}
+
+$('btnRefreshMics').addEventListener('click', refreshMicDevices);
 
 $('save').addEventListener('click', async () => {
   apply(await window.riff.save({
@@ -624,6 +647,9 @@ $('save').addEventListener('click', async () => {
       language: $('language').value.trim(),
       noiseSuppression: $('noiseSuppression').checked,
       openRouterApiKey: $('openRouterApiKey').value.trim(),
+      audioDeviceId: $('settingsMicDevice').value,
+      bubbleEnabled: $('bubbleEnabled').checked,
+      sounds: { enabled: $('soundsEnabled').checked, volume: Number($('soundsVolume').value) },
     },
     general: {
       showWindowOnStartup: $('showWindowOnStartup').checked,

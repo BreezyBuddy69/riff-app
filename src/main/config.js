@@ -26,11 +26,24 @@ const DEFAULTS = {
     language: 'de',
     noiseSuppression: true,
     audioDeviceId: '', // '' = System-Standardmikrofon
-    speechModel: 'openai/whisper-large-v3',
+    // Turbo statt Full (Nutzer-Feedback: Kosten-Dashboard zeigte Whisper als
+    // groessten Kostentreiber): auf Groq $0,04/h statt $0,111/h - fast 3x
+    // guenstiger, WER-Verlust ist fuer diktierte Alltagssaetze kaum spuerbar
+    // und wird von der Cleanup-Runde ohnehin nachgeglaettet.
+    speechModel: 'openai/whisper-large-v3-turbo',
     cleanupModel: 'deepseek/deepseek-v4-flash',
     // Direkter OpenRouter-Call aus dem Main-Prozess fuer minimale Latenz
     // (Sable2 D14). Lokal in config.json, nie an den Renderer gereicht.
     openRouterApiKey: '',
+    // Bubble ein-/ausblenden (Nutzer-Feedback): false blendet die Pille nie
+    // ein, Diktat (Aufnahme/STT/Paste) laeuft unveraendert weiter - nur ohne
+    // visuelle Anzeige, siehe dictationRouter.js.
+    bubbleEnabled: true,
+    // Kurzer Ton bei Start/Ende der Aufnahme (Nutzer-Feedback: hoerbar merken,
+    // dass zugehoert wird, ohne auf die Bubble zu schauen) - synthetisiert im
+    // Renderer, kein Audio-Asset. Default aus: nicht jeder will einen Piepton
+    // bei jedem Diktat.
+    sounds: { enabled: false, volume: 0.6 },
   },
   general: {
     // true: normaler Start (Doppelklick/Windows-Suche, nicht --hidden-
@@ -98,9 +111,20 @@ function writeRaw(parsed) {
 }
 
 function normalize(parsed) {
+  const voice = {
+    ...DEFAULTS.voice,
+    ...parsed.voice,
+    sounds: { ...DEFAULTS.voice.sounds, ...(parsed.voice && parsed.voice.sounds) },
+  };
+  // Einmalige Migration (Nutzer-Feedback: Kosten-Dashboard): der alte Default
+  // 'openai/whisper-large-v3' steht in bereits installierten config.json-
+  // Dateien fest, ohne dass es je ein UI-Feld dafuer gab - jeder gespeicherte
+  // alte Wert ist also garantiert der frühere Default, nie eine bewusste
+  // Nutzerwahl, daher ohne Rueckfrage auf die guenstigere Turbo-Variante heben.
+  if (voice.speechModel === 'openai/whisper-large-v3') voice.speechModel = DEFAULTS.voice.speechModel;
   return {
     hotkeys: { ...DEFAULTS.hotkeys, ...parsed.hotkeys },
-    voice: { ...DEFAULTS.voice, ...parsed.voice },
+    voice,
     general: { ...DEFAULTS.general, ...parsed.general },
     account: { ...DEFAULTS.account, ...parsed.account },
     transforms: { ...DEFAULTS.transforms, ...parsed.transforms },

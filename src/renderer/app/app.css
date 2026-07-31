@@ -259,6 +259,7 @@ textarea { resize: vertical; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
 input::placeholder, textarea::placeholder { color: var(--faint); }
 input[type="search"] { width: 210px; margin: 0; }
+input[type="range"] { width: 100%; margin-top: 8px; accent-color: var(--accent); }
 
 .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .field-row label { margin: 0; }

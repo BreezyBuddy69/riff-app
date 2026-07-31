@@ -67,7 +67,30 @@ async function handleCommand(cmd) {
     case 'stop-capture':
       await stopCapture();
       break;
+    case 'play-cue':
+      playCue(cmd.cue, cmd.volume);
+      break;
   }
+}
+
+// Kurzer synthetischer Ton statt einer Audio-Datei (Nutzer-Feedback: hoerbar
+// merken, ob Riff gerade zuhoert, ohne auf die Bubble zu schauen) - eigener,
+// kurzlebiger AudioContext statt des Capture-Contexts oben, damit ein
+// Ton-Wiedergabefehler die Aufnahme selbst nie beruehrt.
+function playCue(kind, volume) {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = kind === 'end' ? 520 : 780;
+    gain.gain.value = Math.max(0, Math.min(1, volume ?? 0.6)) * 0.25;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.09);
+    osc.onended = () => ctx.close().catch(() => {});
+  } catch { /* rein kosmetisch - darf die Diktier-Pipeline nie stoeren */ }
 }
 
 async function listDevices() {

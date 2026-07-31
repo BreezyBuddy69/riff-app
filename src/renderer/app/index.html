@@ -326,8 +326,21 @@
         </label>
         <p class="hint">„Deutsch" verhindert, dass kurze deutsche Sätze gelegentlich als Englisch erkannt werden. Wer öfter in anderen Sprachen diktiert, stellt „Automatisch erkennen" ein.</p>
         <label class="row"><input id="noiseSuppression" type="checkbox" /> Rauschunterdrückung</label>
+        <label>Mikrofon
+          <span><select id="settingsMicDevice"></select> <button id="btnRefreshMics" type="button" class="btn-ghost small">Aktualisieren</button></span>
+        </label>
         <label>OpenRouter API-Key (optional)<input id="openRouterApiKey" type="password" spellcheck="false" autocomplete="off" /></label>
         <p class="hint">Ohne eigenen Key läuft die Erkennung über Riffs Server — nichts zu konfigurieren.</p>
+      </div>
+
+      <div class="card">
+        <h3>Bubble &amp; Ton</h3>
+        <label class="row"><input id="bubbleEnabled" type="checkbox" /> Bubble beim Diktieren anzeigen</label>
+        <p class="hint">Aus: Riff diktiert unverändert weiter, zeigt dabei nur keine Pille an.</p>
+        <label class="row"><input id="soundsEnabled" type="checkbox" /> Ton bei Start/Ende der Aufnahme</label>
+        <label>Lautstärke
+          <input id="soundsVolume" type="range" min="0" max="1" step="0.05" />
+        </label>
       </div>
 
       <div class="card">

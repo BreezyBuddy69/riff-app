@@ -9,6 +9,13 @@ const insights = require('../src/main/insights');
 const { resolveDictation, applySnippets } = require('../src/main/voice/dictationEngine');
 const { categorize, cleanupExtras } = require('../src/main/appContext');
 const { parseAccelerator, hotkeyLabel, savingsHoursPerWeek } = require('../src/renderer/app/onboardingLogic');
+const { isSilence, isSpeech, isHallucination } = require('../src/main/voice/silenceFilter');
+
+function pcm(samples) {
+  const buf = Buffer.alloc(samples.length * 2);
+  samples.forEach((s, i) => buf.writeInt16LE(s, i * 2));
+  return buf;
+}
 
 function isoDaysAgo(days, hour = 12) {
   const d = new Date();
@@ -124,6 +131,34 @@ const entry = (over = {}) => ({
   assert.equal(savingsHoursPerWeek(3, 100, 100), 0, 'gleich schnell getippt wie gesprochen -> keine Ersparnis behaupten');
   assert.equal(savingsHoursPerWeek(3, 100, 120), 0, 'getippt schneller als gesprochen -> 0, nicht negativ');
   assert.equal(savingsHoursPerWeek(3, null, 40), 0, 'fehlende Messung -> 0 statt NaN');
+}
+
+// --- Stille-/Halluzinations-Filter (Nutzer-Feedback: "vielen Dank" kam ------
+// trotz Filter noch durch) -----------------------------------------------
+{
+  const silence = pcm(new Array(16000).fill(0)); // 1s digitale Stille
+  assert.ok(isSilence(silence), 'reine Stille ist still');
+  assert.ok(!isSpeech(silence, 16000), 'reine Stille ist keine Sprache');
+  assert.ok(!isSpeech(Buffer.alloc(0), 16000), 'leerer Puffer ist keine Sprache');
+
+  // Kurzer lauter Klick (50ms von 1s) reisst die globale RMS nicht, koennte
+  // sie aber in einer kuerzeren Aufnahme reissen - der Punkt hier ist die
+  // MIN_VOICED_MS-Schwelle: zu wenige laute Samples, auch wenn sie laut sind.
+  const clickSamples = new Array(16000).fill(0);
+  for (let i = 0; i < 800; i++) clickSamples[i] = 20000; // 50ms laut
+  const click = pcm(clickSamples);
+  assert.ok(!isSpeech(click, 16000), 'ein kurzer lauter Klick ist keine Sprache (zu wenig Voiced-Dauer)');
+
+  // "Sprache" simuliert: 500ms durchgaengig laut genug.
+  const speechSamples = new Array(16000).fill(0);
+  for (let i = 0; i < 8000; i++) speechSamples[i] = 12000; // 500ms
+  assert.ok(isSpeech(pcm(speechSamples), 16000), '500ms durchgaengig lauter Pegel gilt als Sprache');
+
+  assert.ok(isHallucination('Vielen Dank!'), 'bekannte Standardphrase wird erkannt');
+  assert.ok(isHallucination('Vielen, vielen Dank!'), 'Kommavariante wird ueber Normalisierung erkannt');
+  assert.ok(isHallucination("Danke fürs Zuschauen"), 'Apostroph-lose Variante matcht die Listenform');
+  assert.ok(!isHallucination('Vielen Dank für die Info, ruf mich zurück'), 'echter Satz MIT der Phrase wird nie unterdrückt');
+  assert.ok(!isHallucination('Kauf bitte Milch und Brot'), 'normaler Satz ist keine Halluzination');
 }
 
 console.log('OK — alle Pruefungen bestanden.');
