@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
 const insights = require('../src/main/insights');
 const { resolveDictation, applySnippets } = require('../src/main/voice/dictationEngine');
 const { categorize, cleanupExtras } = require('../src/main/appContext');
+const { parseAccelerator, hotkeyLabel, savingsHoursPerWeek } = require('../src/renderer/app/onboardingLogic');
 
 function isoDaysAgo(days, hour = 12) {
   const d = new Date();
@@ -107,6 +108,22 @@ const entry = (over = {}) => ({
   assert.equal(cleanupExtras({ other: 'formal' }, 'other', []), '');
   const extras = cleanupExtras({ personal: 'very-casual' }, 'personal', [{ term: 'Riff' }]);
   assert.ok(extras.includes('lowercase') && extras.includes('Riff'));
+}
+
+// --- Onboarding: Accelerator-Parsing (Shortcut-Test-Screen) -----------------
+{
+  assert.deepEqual(parseAccelerator('Control+Alt'), { mods: ['Control', 'Alt'], mainKey: null }, 'Standard-Diktat-Hotkey ist reine Modifier-Kombi');
+  assert.deepEqual(parseAccelerator('Control+Alt+D'), { mods: ['Control', 'Alt'], mainKey: 'D' }, 'Haupttaste getrennt von Modifiern erkannt');
+  assert.equal(hotkeyLabel('Control+Alt'), 'Strg + Alt');
+  assert.equal(hotkeyLabel(''), '', 'leerer Hotkey ergibt leeres Label statt Crash');
+}
+
+// --- Onboarding: Zeitersparnis nur aus echten Messwerten, nie erfunden ------
+{
+  assert.equal(savingsHoursPerWeek(3, 140, 40), 15, '3h/Tag, 140 vs 40 WPM -> 5/7 gespart * 21h/Woche = 15');
+  assert.equal(savingsHoursPerWeek(3, 100, 100), 0, 'gleich schnell getippt wie gesprochen -> keine Ersparnis behaupten');
+  assert.equal(savingsHoursPerWeek(3, 100, 120), 0, 'getippt schneller als gesprochen -> 0, nicht negativ');
+  assert.equal(savingsHoursPerWeek(3, null, 40), 0, 'fehlende Messung -> 0 statt NaN');
 }
 
 console.log('OK — alle Pruefungen bestanden.');

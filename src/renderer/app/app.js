@@ -770,4 +770,4 @@ window.riff.onDataChanged(() => reload());
 window.riff.onAccountChanged(() => reload());
 window.riff.onNavigate((v) => go(v));
 
-reload().then(() => go('dictation'));
+reload().then(() => { go('dictation'); maybeStartOnboarding(S); });

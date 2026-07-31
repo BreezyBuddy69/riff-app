@@ -335,6 +335,7 @@
         <label class="row"><input id="autostart" type="checkbox" /> Mit Windows starten</label>
         <label class="row"><input id="showWindowOnStartup" type="checkbox" /> Fenster beim Start anzeigen</label>
         <button id="openFolder" type="button" class="btn-link">Konfigurationsordner öffnen…</button>
+        <button id="replayOnboarding" type="button" class="btn-link">Tutorial erneut anzeigen</button>
         <div class="editor-actions">
           <button id="restartApp" type="button" class="btn-ghost">Neu starten</button>
           <button id="quitApp" type="button" class="btn-ghost danger">Beenden</button>
@@ -352,6 +353,94 @@
 
 <div id="toast" class="toast"></div>
 
+<!-- ==================== Onboarding ==================== -->
+<div id="onboarding" class="onboarding" hidden>
+  <div class="ob-card">
+    <div class="ob-progress" id="obProgress"></div>
+
+    <section class="ob-step" data-step="welcome">
+      <span class="ob-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <h1>Willkommen bei Riff</h1>
+      <p class="lead">Sprich, statt zu tippen — Riff schreibt für dich, in jeder App auf diesem PC. Das dauert zwei Minuten.</p>
+      <button type="button" class="btn-primary block ob-next">Los geht's</button>
+    </section>
+
+    <section class="ob-step" data-step="mic" hidden>
+      <h1>Mikrofon testen</h1>
+      <p class="lead">Sag ein paar Worte — siehst du die Balken?</p>
+      <select id="obMicDevice"></select>
+      <div class="ob-levels" id="obLevels"></div>
+      <p class="hint" id="obMicHint">Warte auf Mikrofon-Freigabe …</p>
+      <div class="ob-actions">
+        <button type="button" class="btn-ghost ob-skip">Überspringen</button>
+        <button type="button" class="btn-primary ob-next">Ja, das funktioniert</button>
+      </div>
+    </section>
+
+    <section class="ob-step" data-step="shortcut" hidden>
+      <h1>Shortcut testen</h1>
+      <p class="lead">Halte <span class="ob-hotkey-label"></span> gedrückt — leuchten die Tasten lila?</p>
+      <div class="ob-keys" id="obKeys"></div>
+      <p class="hint" id="obShortcutHint">Noch nicht erkannt.</p>
+      <div class="ob-actions">
+        <button type="button" class="btn-ghost ob-skip">Überspringen</button>
+        <button type="button" class="btn-primary ob-next" id="obShortcutNext" disabled>Weiter</button>
+      </div>
+    </section>
+
+    <section class="ob-step" data-step="demo" hidden>
+      <h1>Jetzt ausprobieren</h1>
+      <p class="lead">Klick ins Feld, halte <span class="ob-hotkey-label"></span>, sag einen Satz, lass los.</p>
+      <div class="ob-demo-card">
+        <div class="ob-demo-chrome"><span></span><span></span><span></span></div>
+        <textarea id="obDemoField" rows="4" placeholder="Hier erscheint dein gesprochener Text …" spellcheck="false"></textarea>
+      </div>
+      <p class="hint" id="obDemoHint">Wartet auf dein erstes Diktat …</p>
+      <div class="ob-actions">
+        <button type="button" class="btn-ghost ob-skip">Überspringen</button>
+        <button type="button" class="btn-primary ob-next" id="obDemoNext" disabled>Weiter</button>
+      </div>
+    </section>
+
+    <section class="ob-step" data-step="compare" hidden>
+      <h1>Jetzt du: tipp denselben Satz</h1>
+      <p class="lead" id="obCompareTarget">–</p>
+      <textarea id="obCompareField" rows="3" placeholder="Hier abtippen …" spellcheck="false"></textarea>
+      <p class="hint" id="obCompareHint">Der Timer startet mit deinem ersten Tastendruck.</p>
+      <div class="ob-compare" id="obCompareResult" hidden>
+        <div class="ob-compare-row"><span>Gesprochen</span><b id="obSpokenWpm">–</b><span>WPM</span></div>
+        <div class="ob-compare-row"><span>Getippt</span><b id="obTypedWpm">–</b><span>WPM</span></div>
+      </div>
+      <button type="button" class="btn-primary block ob-next" id="obCompareNext" disabled>Weiter</button>
+    </section>
+
+    <section class="ob-step" data-step="savings" hidden>
+      <h1>Deine Zeitersparnis</h1>
+      <p class="lead ob-savings-headline" id="obSavingsHeadline">–</p>
+      <label class="ob-slider-label">Tippzeit pro Tag: <b id="obHoursValue">3</b> Std.
+        <input type="range" id="obHoursSlider" min="1" max="8" step="0.5" value="3" />
+      </label>
+      <button type="button" class="btn-primary block ob-next">Weiter</button>
+    </section>
+
+    <section class="ob-step" data-step="finish" hidden>
+      <h1>Fertig!</h1>
+      <p class="lead">Riff läuft jetzt im Hintergrund. Halte <span class="ob-hotkey-label"></span> in jeder App gedrückt, um zu diktieren.</p>
+      <form id="obSignupForm" class="ob-signup">
+        <p class="hint">Optional: Konto anlegen, um Verlauf und Einstellungen zu sichern — zum Diktieren brauchst du das nie.</p>
+        <input type="text" id="obSignupName" placeholder="Name" spellcheck="false" autocomplete="name" />
+        <input type="email" id="obSignupEmail" placeholder="E-Mail" autocomplete="email" />
+        <input type="password" id="obSignupPassword" placeholder="Passwort (mind. 8 Zeichen)" minlength="8" autocomplete="new-password" />
+        <button type="submit" class="btn-ghost block">Konto erstellen</button>
+        <p class="error" id="obSignupError" hidden></p>
+      </form>
+      <button type="button" class="btn-primary block" id="obFinishBtn">Los geht's mit Riff</button>
+    </section>
+  </div>
+</div>
+
 <script src="app.js"></script>
+<script src="onboardingLogic.js"></script>
+<script src="onboarding.js"></script>
 </body>
 </html>

@@ -94,12 +94,25 @@ function create() {
   return win;
 }
 
-// Mikrofon-Berechtigung ausschliesslich fuer dieses eine Fenster - D15/D8-
-// Prinzip: nichts implizit erlauben, jede andere WebContents-Anfrage (auch
-// zukuenftige) faellt sonst unter denselben globalen Handler.
+// Mikrofon-Berechtigung ausschliesslich fuer die beiden first-party Fenster
+// (Bubble + Hauptfenster) - D15/D8-Prinzip: nichts implizit erlauben, jede
+// andere WebContents-Anfrage (auch zukuenftige) faellt sonst unter denselben
+// globalen Handler. Das Hauptfenster braucht das nur fuer den Mikrofon-Test
+// im Onboarding (app.js) - der eigentliche Diktat-Pfad laeuft ausschliesslich
+// ueber die Bubble hier.
 function allowMicPermission() {
+  // Lazy require gegen einen Require-Zyklus: appWindow.js selbst braucht
+  // dieses Modul nicht, aber dictationRouter.js require't beide - ein
+  // Top-Level-Require hier waere zwar unproblematisch, lazy ist aber die
+  // gaengige Absicherung gegen zukuenftige Zyklen in diesem Codestil.
+  const appWindow = require('../appWindow');
   session.defaultSession.setPermissionRequestHandler((wc, permission, callback) => {
-    callback(permission === 'media' && !!win && !win.isDestroyed() && wc.id === win.webContents.id);
+    if (permission !== 'media') { callback(false); return; }
+    const appWin = appWindow.getWindow();
+    callback(
+      (!!win && !win.isDestroyed() && wc.id === win.webContents.id) ||
+      (!!appWin && !appWin.isDestroyed() && wc.id === appWin.webContents.id)
+    );
   });
 }
 

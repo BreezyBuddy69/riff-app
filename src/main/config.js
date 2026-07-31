@@ -39,6 +39,11 @@ const DEFAULTS = {
     // 2026-07-29). In den Settings selbst wieder abschaltbar, wer das
     // Wispr-Flow-Prinzip (stiller Start) will.
     showWindowOnStartup: true,
+    // Onboarding (Wispr-Flow-Vorbild): Mikro-/Shortcut-Test + Live-Demo beim
+    // allerersten Start. false = noch nicht durchlaufen -> Ueberlagerung geht
+    // vor dem normalen Shell auf. Ueber "Tutorial erneut anzeigen" in den
+    // Einstellungen jederzeit manuell zuruecksetzbar.
+    onboardingCompleted: false,
   },
   // D-Wortkontingent (Nutzer-Feedback 2026-07-29, Master-Prompt §6.10/§9):
   // 'free' zaehlt Woerter gegen license.WEEKLY_LIMIT, 'pro' ist unbegrenzt.
