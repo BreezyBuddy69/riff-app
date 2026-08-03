@@ -160,6 +160,7 @@ if (!app.requestSingleInstanceLock()) {
     Object.assign(cfg.general, updated.general);
     Object.assign(cfg.transforms, updated.transforms);
     if (partial.transforms) transformIssues = transforms.refreshShortcuts();
+    if (partial.voice) dictationRouter.syncIdleBubble();
     return appState();
   });
 

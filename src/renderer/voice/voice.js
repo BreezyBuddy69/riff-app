@@ -171,5 +171,12 @@ async function stopCapture() {
 confirmBtn.addEventListener('click', () => window.voice.confirmToggle());
 cancelBtn.addEventListener('click', () => window.voice.cancelToggle());
 
+// Ruhezustand (voice.idleBubbleEnabled): ein Klick auf den kleinen Punkt
+// startet ein Diktat - dieselbe IPC wie der Haken-Klick im Toggle-Modus,
+// dictationRouter.toggleFlow() startet eine neue Session, wenn keine laeuft.
+pill.addEventListener('click', () => {
+  if (pill.getAttribute('data-phase') === 'resting') window.voice.confirmToggle();
+});
+
 window.voice.onCommand(handleCommand);
 window.voice.onUiState(applyUiState);

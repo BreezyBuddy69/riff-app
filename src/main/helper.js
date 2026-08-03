@@ -9,6 +9,13 @@ const path = require('path');
 const readline = require('readline');
 
 const HELPER_PATH = path.join(__dirname, '..', '..', 'helper', 'RiffHelper.ps1');
+// macOS-Gegenstueck (helper/RiffHelperMac.swift, UNGETESTET - siehe Kommentar
+// dort) - wird von scripts/build-mac-helper.sh auf dem GitHub-Actions-macOS-
+// Runner zu einer fertigen Mach-O-Datei kompiliert, BEVOR electron-builder
+// laeuft. `files: ["helper/**/*"]` in package.json nimmt sie automatisch mit,
+// kein extraResources noetig - gleiches Prinzip wie HELPER_PATH oben (asar:
+// false, __dirname-relative Pfade sind in Dev UND gepackt identisch).
+const HELPER_PATH_MAC = path.join(__dirname, '..', '..', 'helper', 'RiffHelperMac');
 const REQUEST_TIMEOUT_MS = 15000;
 
 let child = null;
@@ -31,9 +38,15 @@ function ensureStarted() {
   readyPromise = new Promise((resolve, reject) => {
     // Werte gehen ausschliesslich als JSON ueber stdin an ein festes Skript -
     // hier wird nie Modell-Output in eine Befehlszeile interpoliert.
-    child = spawn('powershell.exe', [
-      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', HELPER_PATH,
-    ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+    // Plattform-Weiche: identisches JSON-Lines-Protokoll auf beiden Seiten
+    // (siehe Kommentar-Kopf in RiffHelper.ps1 bzw. RiffHelperMac.swift) - der
+    // Rest dieser Datei (request/ensureStarted/warmUp) ist bewusst NICHT
+    // plattformabhaengig, nur der Spawn selbst.
+    child = process.platform === 'darwin'
+      ? spawn(HELPER_PATH_MAC, [], { stdio: ['pipe', 'pipe', 'pipe'] })
+      : spawn('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', HELPER_PATH,
+      ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
 
     const startTimer = setTimeout(() => {
       reject(new Error('Action-Helper nicht rechtzeitig bereit'));

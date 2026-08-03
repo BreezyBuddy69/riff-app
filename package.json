@@ -7,7 +7,9 @@
   "scripts": {
     "start": "electron .",
     "test": "node test/check.js",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "build:helper:mac": "swiftc helper/RiffHelperMac.swift -o helper/RiffHelperMac && chmod +x helper/RiffHelperMac"
   },
   "build": {
     "appId": "cloud.halovision.riff",
@@ -22,9 +24,14 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": ["nsis", "portable"],
       "icon": "assets/icon.ico",
       "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": ["zip"],
+      "icon": "assets/icon.png",
+      "identity": null
     },
     "nsis": {
       "oneClick": true,
@@ -34,6 +41,9 @@
       "runAfterFinish": true,
       "shortcutName": "Riff",
       "artifactName": "Riff-Setup.exe"
+    },
+    "portable": {
+      "artifactName": "Riff-Portable.exe"
     }
   },
   "devDependencies": {

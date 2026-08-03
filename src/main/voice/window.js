@@ -23,10 +23,40 @@ const SIZES = {
   normal: { w: 96, h: 40 },
   toggle: { w: 118, h: 40 },
   error: { w: 320, h: 120 },
+  // Staendig sichtbarer Ruhezustand (Nutzerwunsch, voice.idleBubbleEnabled):
+  // kleiner schwarzer Punkt statt der vollen Pille, waechst beim Diktieren
+  // per resize() auf normal/toggle - siehe dictationRouter.js.
+  mini: { w: 30, h: 30 },
 };
 
 let win = null;
 let pendingDevices = null;
+let fadeTimer = null;
+
+// Weiches Ein-/Ausblenden (Nutzer-Feedback: "sollte fade away und in beim
+// Diktieren" - bisher instant show/hide, sah wie ein Aufblitzen aus).
+// setOpacity() ist eine reine Fensterebenen-Eigenschaft (kein Compositor-
+// Overhead im Renderer noetig) - ein simples steppedes Interval reicht, kein
+// echtes Animations-Framework noetig fuer 120ms.
+const FADE_MS = 120;
+const FADE_STEPS = 6;
+
+function fadeTo(target, onDone) {
+  if (!win || win.isDestroyed()) return;
+  if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; }
+  const start = win.getOpacity();
+  let step = 0;
+  fadeTimer = setInterval(() => {
+    if (!win || win.isDestroyed()) { clearInterval(fadeTimer); fadeTimer = null; return; }
+    step++;
+    win.setOpacity(start + (target - start) * (step / FADE_STEPS));
+    if (step >= FADE_STEPS) {
+      clearInterval(fadeTimer);
+      fadeTimer = null;
+      onDone?.();
+    }
+  }, FADE_MS / FADE_STEPS);
+}
 
 function computeBounds(sizeKey = 'normal') {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
@@ -117,14 +147,21 @@ function allowMicPermission() {
 }
 
 function show(opts = {}) {
+  const wasVisible = !!win && !win.isDestroyed() && win.isVisible();
   if (!win || win.isDestroyed()) create();
   win.setBounds(computeBounds(opts.size));
+  if (!wasVisible) win.setOpacity(0);
   win.showInactive(); // sichtbar, aber NIE fokussiert - Ziel-App behaelt den OS-Fokus
   // Vortritt vor Sable2/Mumats eigener Bubble (Nutzerwunsch): beide laufen auf
   // demselben 'screen-saver'-alwaysOnTop-Level, das OS entscheidet bei Gleichstand
   // nach zuletzt-angefasst - moveTop() zwingt Riffs Pille JEDES Mal beim Anzeigen
   // wieder ganz nach oben, unabhaengig davon, was Sable2/Mumat zuletzt gemacht hat.
   win.moveTop();
+  // Immer fadeTo(1), auch wenn wasVisible schon true war (z.B. mitten in einem
+  // hide()-Fade neu getriggert) - fadeTo() bricht selbst jeden laufenden Fade
+  // ab, ein liegen gebliebener Ausblend-Fade wuerde die Pille sonst dunkel
+  // stehen lassen, obwohl show() gerade aktiv angezeigt werden soll.
+  fadeTo(1);
 }
 
 // Groesse nachtraeglich wechseln, waehrend die Pille schon sichtbar ist (z.B.
@@ -136,7 +173,8 @@ function resize(sizeKey) {
 }
 
 function hide() {
-  if (win && !win.isDestroyed()) win.hide();
+  if (!win || win.isDestroyed()) return;
+  fadeTo(0, () => { if (win && !win.isDestroyed()) win.hide(); });
 }
 
 // Toggle-Modus (Mode B) zeigt zwei winzige Haken/Kreuz-Icons zum Bestaetigen/

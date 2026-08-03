@@ -611,6 +611,7 @@ function renderSettings() {
   $('noiseSuppression').checked = S.config.voice.noiseSuppression;
   $('openRouterApiKey').value = S.config.voice.openRouterApiKey;
   $('bubbleEnabled').checked = S.config.voice.bubbleEnabled !== false;
+  $('idleBubbleEnabled').checked = !!S.config.voice.idleBubbleEnabled;
   $('soundsEnabled').checked = !!S.config.voice.sounds.enabled;
   $('soundsVolume').value = S.config.voice.sounds.volume;
   $('autostart').checked = S.autostart;
@@ -649,6 +650,7 @@ $('save').addEventListener('click', async () => {
       openRouterApiKey: $('openRouterApiKey').value.trim(),
       audioDeviceId: $('settingsMicDevice').value,
       bubbleEnabled: $('bubbleEnabled').checked,
+      idleBubbleEnabled: $('idleBubbleEnabled').checked,
       sounds: { enabled: $('soundsEnabled').checked, volume: Number($('soundsVolume').value) },
     },
     general: {

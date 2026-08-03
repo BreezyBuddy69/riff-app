@@ -40,7 +40,7 @@ async function transcribeViaN8n(base64Wav, language, opts) {
   const res = await fetch(N8N_STT_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ audioBase64: base64Wav, language: language && language !== 'auto' ? language : 'de' }),
+    body: JSON.stringify({ audioBase64: base64Wav, language: language && language !== 'auto' ? language : 'auto' }),
     signal: AbortSignal.timeout(opts.partial ? 12000 : 20000),
   });
   if (!res.ok) return { ok: false, text: '', error: `HTTP ${res.status}` };

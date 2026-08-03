@@ -39,8 +39,18 @@ function create() {
 function show(view) {
   const fresh = !win || win.isDestroyed();
   if (fresh) create();
-  if (fresh) win.once('ready-to-show', () => { win.show(); if (view) send('app:navigate', view); });
-  else { win.show(); if (view) send('app:navigate', view); }
+  // Bug-Report: Tutorial kam auf einem frischen Laptop nicht - die Trigger-
+  // Logik selbst (config-Default, IPC, maybeStartOnboarding) ist korrekt,
+  // reproduzierbar war aber nicht zu klaeren. Haeufigster Kandidat: das
+  // Fenster wurde zwar erzeugt, aber nicht wirklich in den Vordergrund
+  // geholt (z.B. weil SmartScreen im selben Moment um Fokus konkurriert,
+  // siehe Windows-Defender-Punkt im Plan) - focus()+moveTop() zusaetzlich zu
+  // show() ist eine billige Absicherung dagegen, unabhaengig von der
+  // tatsaechlichen Ursache. "Tutorial erneut anzeigen" in den Einstellungen
+  // bleibt der garantierte manuelle Weg.
+  const reveal = () => { win.show(); win.focus(); win.moveTop(); if (view) send('app:navigate', view); };
+  if (fresh) win.once('ready-to-show', reveal);
+  else reveal();
 }
 
 function send(channel, payload) {

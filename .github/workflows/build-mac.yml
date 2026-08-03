@@ -1,0 +1,52 @@
+name: Build macOS package
+
+# Manuell + bei Aenderungen an mac-relevanten Pfaden - baut auf einem echten
+# macOS-Runner (kostenlose Actions-Minuten, kein eigener Mac noetig), weil
+# electron-builder Mac-Targets NUR von macOS aus bauen kann (getestet, siehe
+# Riffs Projekt-Memory: "electron-builder --mac" von Windows aus verweigert
+# sich hart). Kompiliert zuerst den nativen Swift-Helper (RiffHelperMac.swift,
+# Ersatz fuer RiffHelper.ps1 auf Mac), dann electron-builder --mac.
+#
+# WICHTIG: ein gruener Lauf hier beweist NUR "kompiliert + paketiert sauber",
+# NICHT "Diktieren funktioniert auf echtem Mac" - Tastatur-Injection und
+# Bedienungshilfen-Berechtigung lassen sich in CI (kein echter Login-Session-
+# Kontext, kein Mensch der die Berechtigung erteilt) nicht pruefen.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "helper/RiffHelperMac.swift"
+      - "src/**"
+      - "package.json"
+      - ".github/workflows/build-mac.yml"
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Compile native macOS helper (Swift)
+        run: |
+          swiftc helper/RiffHelperMac.swift -o helper/RiffHelperMac
+          chmod +x helper/RiffHelperMac
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build unsigned macOS package
+        run: npx electron-builder --mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false" # kein Zertifikat vorhanden, gar nicht erst danach suchen
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: riff-mac-unsigned
+          path: dist/*.zip
+          retention-days: 14

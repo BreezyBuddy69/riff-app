@@ -151,3 +151,21 @@ body {
 #pill[data-kind="toggle"][data-phase="listening"] .ctrl {
   display: flex;
 }
+
+/* ---------- Ruhezustand (voice.idleBubbleEnabled) ----------
+   Kleiner, staendig sichtbarer Punkt statt der vollen Pille - keine Waveform,
+   keine Haken/Kreuz-Icons, nur eine dezent pulsierende Flaeche zum Anklicken.
+   Groesse MUSS mit SIZES.mini in window.js synchron bleiben. */
+#pill[data-phase="resting"] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 150ms ease, transform 100ms ease;
+}
+#pill[data-phase="resting"]:hover { opacity: 1; transform: scale(1.08); }
+#pill[data-phase="resting"] #bars,
+#pill[data-phase="resting"] .ctrl,
+#pill[data-phase="resting"] #errorText {
+  display: none;
+}

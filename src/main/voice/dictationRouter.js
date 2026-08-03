@@ -29,7 +29,11 @@ const SAMPLE_RATE = 16000; // Whisper-Standard
 const MAX_CAPTURE_MS = 5 * 60 * 1000;
 const IDLE_HIDE_MS = 1400;
 const ERROR_HIDE_MS = 6000;
-const SKIP_CLEANUP_MAX_WORDS = 3;
+// Nutzerwunsch: der zweite Netzwerk-Roundtrip (Cleanup-LLM) kostet spuerbare
+// Latenz und lohnt sich bei kurzen Aeusserungen kaum - Schwelle deutlich
+// angehoben (war 3 Woerter, praktisch "nie skip") auf "ein bis zwei kurze
+// Saetze bleiben roh, ab ~drei Saetzen greift die Bereinigung".
+const SKIP_CLEANUP_MAX_WORDS = 25;
 // Whisper halluziniert auf Stille/Rauschen zuverlaessig Standardphrasen
 // ("Vielen Dank", "Amen", "Untertitelung...") statt leer zu bleiben - ein
 // Bug-Report (2026-07-30): Aufnahme ohne Sprache hat genau das gepastet.
@@ -62,11 +66,27 @@ function sendUi(partial = {}) {
   voiceWindow.send('voice:ui-state', { kind, phase, errorText: '', ...partial });
 }
 
+// Statt komplett zu verschwinden, faellt die Pille bei aktivem
+// voice.idleBubbleEnabled auf den kleinen Ruhezustand zurueck (Nutzerwunsch) -
+// bleibt sichtbar+klickbar, ein Klick startet ein Diktat genau wie der
+// Shortcut (siehe voice.js: Klick ruft dieselbe confirmToggle()-IPC wie der
+// Haken-Button). Ohne die Einstellung unveraendertes Verhalten: hide().
+function restingOrHide() {
+  if (cfg.voice.idleBubbleEnabled && cfg.voice.bubbleEnabled !== false) {
+    phase = 'resting';
+    voiceWindow.show({ size: 'mini' });
+    voiceWindow.setInteractive(true);
+    sendUi();
+  } else {
+    voiceWindow.hide();
+  }
+}
+
 function scheduleHide(ms) {
   clearHideTimer();
   hideTimer = setTimeout(() => {
     hideTimer = null;
-    if (phase === 'idle' || phase === 'error') voiceWindow.hide();
+    if (phase === 'idle' || phase === 'error') restingOrHide();
   }, ms);
 }
 function clearHideTimer() {
@@ -301,10 +321,20 @@ function onLocalError(text) {
 function init({ cfgRef }) {
   cfg = cfgRef;
   voiceWindow.allowMicPermission();
+  restingOrHide(); // zeigt beim Start sofort den Ruhezustand, falls aktiviert
+}
+
+// Wird nach settings:save gerufen (main.js) - wer idleBubbleEnabled gerade
+// erst anschaltet, soll den Ruhezustand sofort sehen, nicht erst nach dem
+// naechsten Diktat. Waehrend eine Session laeuft (kind gesetzt) nicht
+// eingreifen, die regelt ihre Anzeige selbst zu Ende.
+function syncIdleBubble() {
+  if (kind) return;
+  restingOrHide();
 }
 
 module.exports = {
   init, startHold, endHold, toggleFlow, cancelToggle,
   onPcmChunk, onVadEvent, onLocalError,
-  isActive, getKind,
+  isActive, getKind, syncIdleBubble,
 };

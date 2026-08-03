@@ -39,6 +39,11 @@ const DEFAULTS = {
     // ein, Diktat (Aufnahme/STT/Paste) laeuft unveraendert weiter - nur ohne
     // visuelle Anzeige, siehe dictationRouter.js.
     bubbleEnabled: true,
+    // Nutzerwunsch: statt komplett zu verschwinden, bleibt die Pille als
+    // kleiner schwarzer Punkt staendig sichtbar (place "resting") - Klick
+    // darauf startet ein Diktat genauso wie der Shortcut. Default aus, weil
+    // eine dauerhaft sichtbare Pille nicht jeder will (siehe dictationRouter.js).
+    idleBubbleEnabled: false,
     // Kurzer Ton bei Start/Ende der Aufnahme (Nutzer-Feedback: hoerbar merken,
     // dass zugehoert wird, ohne auf die Bubble zu schauen) - synthetisiert im
     // Renderer, kein Audio-Asset. Default aus: nicht jeder will einen Piepton
