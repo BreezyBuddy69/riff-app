@@ -49,7 +49,11 @@ let transformIssues = [];
 async function toggleAutostart() {
   if (autostart.isEnabled()) { autostart.disable(); return false; }
   try {
-    await autostart.enable({ exePath: process.execPath, appDir: path.join(__dirname, '..', '..') });
+    // hidden:true, damit ein Login-Autostart die App still im Hintergrund
+    // startet (D6/Wispr-Flow-Prinzip) statt bei jedem PC-Start ein Fenster
+    // aufzureissen - galt bisher nur fuer den automatischen Erststart-Fall
+    // unten, nicht fuer manuelles Anschalten in den Einstellungen.
+    await autostart.enable({ exePath: process.execPath, appDir: path.join(__dirname, '..', '..'), hidden: true });
     return true;
   } catch (err) {
     console.error('[riff] Autostart konnte nicht aktiviert werden:', err.message);
@@ -102,7 +106,31 @@ if (!app.requestSingleInstanceLock()) {
     // wie es war. Kein Blocker fuer den Start.
     account.refresh(cfg).then(() => appWindow.send('app:account-changed')).catch(() => {});
 
-    if (!startHidden && cfg.general.showWindowOnStartup) appWindow.show();
+    // Fresh install (onboardingCompleted noch false): Autostart soll von
+    // Anfang an auf "ja" stehen (Nutzerwunsch), nicht erst, wenn jemand es in
+    // den Einstellungen findet und selbst anschaltet. hidden:true, damit
+    // spaetere Login-Starts still bleiben (D6). Nur EINMAL versucht - laueft
+    // still im Hintergrund, ein Fehlschlag (seltene Rechte-Probleme) blockt
+    // den Start nie.
+    if (!cfg.general.onboardingCompleted && !autostart.isEnabled()) {
+      autostart
+        .enable({ exePath: process.execPath, appDir: path.join(__dirname, '..', '..'), hidden: true })
+        .catch((err) => console.warn('[riff] Autostart-Default fehlgeschlagen:', err.message));
+    }
+
+    if (!startHidden && cfg.general.showWindowOnStartup) {
+      appWindow.show();
+      // Haerten gegen den bisher nicht reproduzierbaren "Tutorial kam nicht"-
+      // Bug-Report (2x gemeldet): appWindow.show() ruft bereits focus()+
+      // moveTop() (siehe appWindow.js), aber falls das Fenster durch einen
+      // Windows-SmartScreen-Dialog o.ae. im selben Moment doch den Fokus
+      // verliert/verdeckt wird, holt dieser verzoegerte zweite Versuch es
+      // sicher nochmal nach vorn - billige Absicherung ohne bekannten
+      // Nachteil, greift nur, wenn onboarding noch nicht durchlaufen ist.
+      if (!cfg.general.onboardingCompleted) {
+        setTimeout(() => { if (!cfg.general.onboardingCompleted) appWindow.show(); }, 2500);
+      }
+    }
 
     createTray({
       onQuit: () => app.quit(),

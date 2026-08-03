@@ -83,12 +83,20 @@ function playCue(kind, volume) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.value = kind === 'end' ? 520 : 780;
-    gain.gain.value = Math.max(0, Math.min(1, volume ?? 0.6)) * 0.25;
+    osc.frequency.value = kind === 'end' ? 480 : 720;
+    const peak = Math.max(0, Math.min(1, volume ?? 0.6)) * 0.2;
+    const now = ctx.currentTime;
+    // Weiche Huelle statt hartem An/Aus (Nutzerwunsch: "schoenerer, softerer
+    // Sound") - vorher sprang die Lautstaerke ohne Envelope sofort auf den
+    // vollen Wert, das erzeugt ein hoerbares Klicken am Einsatz. Schneller
+    // Attack, exponentieller Decay klingt runder als ein hartes Gate.
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0001), now + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.09);
+    osc.start(now);
+    osc.stop(now + 0.24);
     osc.onended = () => ctx.close().catch(() => {});
   } catch { /* rein kosmetisch - darf die Diktier-Pipeline nie stoeren */ }
 }

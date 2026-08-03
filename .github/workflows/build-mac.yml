@@ -31,10 +31,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Compile native macOS helper (Swift)
+      - name: Compile native macOS helper (Swift, universal x64+arm64)
+        # Ein Mac-Nutzer meldete ein arm64-only Helper-Binary auf einem Intel-
+        # Mac (Bug: App im Finder da, aber ausgegraut mit X - exec format
+        # error laesst sich vermuten). electron-builder baut die App selbst
+        # bereits universal (siehe package.json mac.target), der Helper muss
+        # das jetzt auch sein, sonst schlaegt spawn() auf Intel weiterhin fehl.
         run: |
-          swiftc helper/RiffHelperMac.swift -o helper/RiffHelperMac
+          swiftc -target x86_64-apple-macos11 helper/RiffHelperMac.swift -o helper/RiffHelperMac-x64
+          swiftc -target arm64-apple-macos11 helper/RiffHelperMac.swift -o helper/RiffHelperMac-arm64
+          lipo -create helper/RiffHelperMac-x64 helper/RiffHelperMac-arm64 -output helper/RiffHelperMac
+          rm helper/RiffHelperMac-x64 helper/RiffHelperMac-arm64
           chmod +x helper/RiffHelperMac
+          lipo -info helper/RiffHelperMac
 
       - name: Install dependencies
         run: npm ci

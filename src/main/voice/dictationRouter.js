@@ -27,7 +27,12 @@ const SAMPLE_RATE = 16000; // Whisper-Standard
 // laeuft eine Aufnahme unbegrenzt weiter, wenn eine klemmende Taste oder ein
 // vergessener Toggle-Modus niemand sie beendet.
 const MAX_CAPTURE_MS = 5 * 60 * 1000;
-const IDLE_HIDE_MS = 1400;
+// Nutzerwunsch: fuehlte sich traege an ("wartet 5 Sek zum Wegfaden") - war
+// vorher 1400ms. ACHTUNG bei zukuenftigen Latenz-Beschwerden: der weit
+// groessere Anteil der gefuehlten Wartezeit ist fast immer die STT+Cleanup-
+// Netzwerk-Rundreise waehrend phase='thinking' (siehe finish() unten), nicht
+// dieser Timer hier - der laeuft erst NACH dem Paste.
+const IDLE_HIDE_MS = 700;
 const ERROR_HIDE_MS = 6000;
 // Nutzerwunsch: der zweite Netzwerk-Roundtrip (Cleanup-LLM) kostet spuerbare
 // Latenz und lohnt sich bei kurzen Aeusserungen kaum - Schwelle deutlich

@@ -24,9 +24,10 @@ const SIZES = {
   toggle: { w: 118, h: 40 },
   error: { w: 320, h: 120 },
   // Staendig sichtbarer Ruhezustand (Nutzerwunsch, voice.idleBubbleEnabled):
-  // kleiner schwarzer Punkt statt der vollen Pille, waechst beim Diktieren
-  // per resize() auf normal/toggle - siehe dictationRouter.js.
-  mini: { w: 30, h: 30 },
+  // duenne, breite Pille statt eines runden Punkts (Nutzerwunsch: "laenglicher
+  // in die Breite und weniger hoch"), waechst beim Diktieren per resize() auf
+  // normal/toggle - siehe dictationRouter.js.
+  mini: { w: 40, h: 16 },
 };
 
 let win = null;
@@ -62,12 +63,16 @@ function computeBounds(sizeKey = 'normal') {
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
   const work = display.workArea;
   const { w, h } = SIZES[sizeKey] || SIZES.normal;
-  // Unten MITTIG (wie Wispr Flow), nicht mehr unten rechts. Mit sichtbarer
-  // Taskbar endet workArea ueber ihr -> 16px Abstand darueber. Ohne Taskbar
-  // (workArea = volle Displayhoehe, z.B. Auto-Hide) darf die Pille bewusst
-  // etwas tiefer an die Bildschirmkante rutschen.
-  const hasTaskbar = work.height < display.bounds.height || work.y > display.bounds.y;
-  const gap = hasTaskbar ? 16 : 8;
+  // Unten MITTIG (wie Wispr Flow). IMMER die groessere Reserve unten lassen,
+  // auch wenn workArea aktuell KEINE Taskbar zeigt (Nutzer-Feedback: bei
+  // Auto-Hide-Taskbar erscheint diese als OVERLAY beim Hochfahren der Maus,
+  // OHNE dass sich workArea aendert - die Pille sass mit dem alten kleinen
+  // 8px-Gap mitten im Reveal-Bereich der Taskbar). Eine feste, grosszuegige
+  // Reserve (ungefaehr Taskbar-Hoehe + Puffer) ist einfacher und robuster als
+  // Auto-Hide praezise zu erkennen (der dafuer noetige taskbar_rect-Helper-
+  // Call waere ein asynchroner Roundtrip in dieser synchronen Hot-Path-
+  // Funktion).
+  const gap = 56;
   return {
     x: Math.round(work.x + (work.width - w) / 2),
     y: Math.round(work.y + work.height - h - gap),

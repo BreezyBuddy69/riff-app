@@ -9,7 +9,7 @@
     "test": "node test/check.js",
     "dist": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
-    "build:helper:mac": "swiftc helper/RiffHelperMac.swift -o helper/RiffHelperMac && chmod +x helper/RiffHelperMac"
+    "build:helper:mac": "swiftc -target x86_64-apple-macos11 helper/RiffHelperMac.swift -o helper/RiffHelperMac-x64 && swiftc -target arm64-apple-macos11 helper/RiffHelperMac.swift -o helper/RiffHelperMac-arm64 && lipo -create helper/RiffHelperMac-x64 helper/RiffHelperMac-arm64 -output helper/RiffHelperMac && rm helper/RiffHelperMac-x64 helper/RiffHelperMac-arm64 && chmod +x helper/RiffHelperMac"
   },
   "build": {
     "appId": "cloud.halovision.riff",
@@ -30,7 +30,7 @@
       "signAndEditExecutable": false
     },
     "mac": {
-      "target": ["zip"],
+      "target": [{ "target": "zip", "arch": ["universal"] }],
       "icon": "assets/icon.png",
       "identity": null
     },

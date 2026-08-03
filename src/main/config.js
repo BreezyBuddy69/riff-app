@@ -13,6 +13,14 @@ const DEFAULTS = {
     // Mode A (Master-Prompt §6.1): HALTEN zum Aufnehmen, Loslassen stoppt
     // und pastet - laeuft ueber holdWatcher.js (GetAsyncKeyState), nicht
     // Electrons globalShortcut, weil das keine reinen Modifier-Kombis kann.
+    // Bug-Report (2026-08): eine reine Modifier-Kombi ohne dritte Taste kann
+    // mit OEM-Laptop-Shortcuts kollidieren (analog zum AltGr-Fall, den
+    // holdWatcher.js schon behandelt - z.B. meldete ein Nutzer, dass ein
+    // Fn+Win-Funktionstasten-Kombo Ctrl+Alt am OS synthetisiert und damit
+    // ungewollt ein Diktat startet). Kein pauschaler Fix ohne die genaue
+    // Hardware moeglich - wer das trifft, sollte in den Einstellungen auf
+    // eine Kombi MIT Haupttaste umstellen (z.B. "Control+Alt+Space"), die
+    // kollidiert nicht mit reinen Modifier-Synthesen.
     flowHold: 'Control+Alt',
     // Mode B: zweimal kurz antippen startet, zweimal kurz antippen ODER
     // Klick auf Haken/Kreuz in der Bubble beendet - laeuft ueber
