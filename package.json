@@ -16,6 +16,7 @@
     "productName": "Riff",
     "directories": { "output": "dist" },
     "asar": false,
+    "publish": null,
     "files": [
       "src/**/*",
       "helper/**/*",
